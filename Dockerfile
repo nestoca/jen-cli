@@ -10,7 +10,7 @@ RUN go build
 
 # -----------
 
-FROM debian:12.10
+FROM debian:bookworm-20250721
 
 COPY --from=build /app/jen /jen
 CMD ["bash"]
