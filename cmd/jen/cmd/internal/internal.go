@@ -9,14 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/silphid/jen/cmd/jen/internal/shell"
-
 	"github.com/silphid/jen/cmd/jen/internal/exec"
 	"github.com/silphid/jen/cmd/jen/internal/helpers"
 	"github.com/silphid/jen/cmd/jen/internal/home"
 	"github.com/silphid/jen/cmd/jen/internal/logging"
 	"github.com/silphid/jen/cmd/jen/internal/project"
+	"github.com/silphid/jen/cmd/jen/internal/shell"
 	"github.com/silphid/jen/cmd/jen/internal/spec"
+	jenssh "github.com/silphid/jen/cmd/jen/internal/ssh"
 )
 
 // Options represents all command line configurations
@@ -212,20 +212,30 @@ func (c context) GetShellVars(includeProcessVars bool) []string {
 	// Combine bin dirs with PATH env var
 	pathVar := strings.Join(append(c.getBinDirs(), os.Getenv("PATH")), ":")
 
-	// Collect all current process env vars, except PATH
+	// Collect all current process env vars, except PATH and SSH_AUTH_SOCK
+	// (SSH_AUTH_SOCK is resolved separately below).
 	var env []string
 	if includeProcessVars {
 		for _, entry := range os.Environ() {
-			if !strings.HasPrefix(entry, "PATH=") {
+			if !strings.HasPrefix(entry, "PATH=") && !strings.HasPrefix(entry, "SSH_AUTH_SOCK=") {
 				env = append(env, entry)
 			}
 		}
 	}
 
+	// Resolve and inject the best available SSH auth socket so that
+	// subcommands (e.g. docker build --mount=type=ssh) can authenticate
+	// regardless of which SSH agent the developer uses.
+	if sock := jenssh.ResolveAuthSock(); sock != "" {
+		entry := fmt.Sprintf("SSH_AUTH_SOCK=%s", sock)
+		env = append(env, entry)
+		logging.Log("%s", entry)
+	}
+
 	// Override PATH env var
 	entry := fmt.Sprintf("PATH=%v", pathVar)
 	env = append(env, entry)
-	logging.Log(entry)
+	logging.Log("%s", entry)
 
 	// Then values env vars
 	logging.Log("Environment variables:")
@@ -233,7 +243,7 @@ func (c context) GetShellVars(includeProcessVars bool) []string {
 	for key, value := range vars {
 		entry := fmt.Sprintf("%s=%v", key, value)
 		env = append(env, entry)
-		logging.Log(entry)
+		logging.Log("%s", entry)
 	}
 	return env
 }
