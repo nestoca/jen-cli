@@ -1,6 +1,7 @@
 module github.com/silphid/jen
 
 go 1.24.0
+toolchain go1.26.3
 
 require (
 	github.com/AlecAivazis/survey/v2 v2.2.9
