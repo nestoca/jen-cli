@@ -85,7 +85,7 @@ func maybePull() error {
 
 	logging.Log("Running git pull in %s ...\n", jenHome)
 	if err := shell.ExecuteOutputOnlyErrors(nil, jenHome, "git pull"); err != nil {
-		return fmt.Errorf("pulling latest templates: %w\nuse --skip-pull flag to bypass pulling template git repo", err)
+		return fmt.Errorf("pulling latest templates in %s: %w\nuse --skip-pull flag to bypass pulling template git repo", jenHome, err)
 	}
 
 	if err := os.WriteFile(sentinelFile, []byte{}, 0644); err != nil {
